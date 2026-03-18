@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>XX學校跑班系統</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      text-align: center;
+      padding: 20px;
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 40px;
+    }
+
+    .button-row {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .action-btn {
+      flex: 1 1 150px; /* 自動撐開，最小 150px */
+      padding: 20px;
+      font-size: calc(12px + 1vw); /* 字體會依按鈕寬度自動縮放 */
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      color: white;
+      transition: transform 0.2s;
+    }
+
+    .action-btn:hover {
+      transform: scale(1.05);
+    }
+
+    .send-mail { background-color: #4CAF50; }
+    .sign-in { background-color: #2196F3; }
+    .attendance { background-color: #f44336; }
+  </style>
+</head>
+<body>
+
+  <h1>XX學校跑班系統</h1>
+
+  <div class="button-row">
+    <button class="action-btn send-mail" onclick="sendMail()">發出點名信</button>
+    <button class="action-btn sign-in" onclick="studentSignIn()">學生簽到系統</button>
+    <button class="action-btn attendance" onclick="checkAttendance()">查詢出缺席</button>
+  </div>
+
+  <script>
+    function sendMail() {
+      alert("這裡可以呼叫發出點名信功能（可連接 Google Apps Script 或後端）。");
+    }
+
+    function studentSignIn() {
+      alert("這裡可以打開學生簽到系統頁面（QR Code 掃描 + 簽到）。");
+    }
+
+    function checkAttendance() {
+      alert("這裡可以查詢學生出缺席狀態。");
+    }
+  </script>
+
+</body>
+</html>
