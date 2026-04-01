@@ -143,4 +143,86 @@ function renderTable(data) {
 
   data.forEach(row => {
     // 略過沒有學號的空白資料
-    if (!row["編號
+    if (!row["編號"] && !row["學號"]) return; 
+
+    const tr = document.createElement("tr");
+
+    // 相容可能的大小寫差異
+    const email = row["EMAIL"] || row["Email"] || row["email"] || "";
+
+    tr.innerHTML = `
+      <td><input type="checkbox" data-id="${row.學號}" data-course="${row.課程名稱}" onchange="handleCheck(this)"></td>
+      <td>${row.編號 || ""}</td>
+      <td>${row.班級 || ""}</td>
+      <td>${row.座號 || ""}</td>
+      <td>${row.學號 || ""}</td>
+      <td>${row.姓名 || ""}</td>
+      <td>${row.課程名稱 || ""}</td>
+      <td>${row.科目 || ""}</td>
+      <td>${row.上課教室 || ""}</td>
+      <td>${row.教師 || ""}</td>
+      <td>${email}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ==========================================
+// 3. 核取方塊邏輯：同一學號只能選擇一堂課
+// ==========================================
+function handleCheck(cb) {
+  if (!cb.checked) return; 
+  
+  const studentId = cb.dataset.id;
+  const checkboxes = document.querySelectorAll(`input[data-id='${studentId}']`);
+  
+  checkboxes.forEach(x => {
+    if (x !== cb) {
+      x.checked = false; 
+    }
+  });
+}
+
+// ==========================================
+// 4. 獲取已選取的「USER (點名名單)」
+// ==========================================
+function getSelected() {
+  const selectedRows = [];
+  const checkedBoxes = document.querySelectorAll("input[type='checkbox']:checked");
+  
+  checkedBoxes.forEach(cb => {
+    const tr = cb.closest("tr");
+    selectedRows.push({
+      學號: cb.dataset.id,
+      編號: tr.cells[1].innerText,
+      姓名: tr.cells[5].innerText,
+      課程名稱: tr.cells[6].innerText,
+      EMAIL: tr.cells[10].innerText
+    });
+  });
+  return selectedRows;
+}
+
+// 📧 確認並儲存名單
+function sendMail() {
+  const selected = getSelected();
+  if(selected.length === 0) {
+    alert("請先在表格中勾選要點名的學生！");
+    return;
+  }
+  
+  localStorage.setItem("selectedStudents", JSON.stringify(selected));
+  console.log("已產生的 USER 名單 (含 EMAIL)：", selected);
+  alert("✅ 已確認 " + selected.length + " 人的點名名單 (USER)！您可以前往掃描頁了。");
+}
+
+// 📷 開啟掃描頁
+function openScanner() {
+  const selected = getSelected();
+  localStorage.setItem("selectedStudents", JSON.stringify(selected));
+  window.location.href = "scanner.html";
+}
+</script>
+
+</body>
+</html>
