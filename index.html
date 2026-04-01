@@ -99,7 +99,7 @@ let courseData = []; // 存放 Excel 匯入的課程資料
 
 // 1. 初始化時載入 JSON USER 資料 (根據您的描述，這是 json 就是 user)
 // 這裡將 tableConvert.com_thao5t.json 視為您的 user 資料
-fetch("tableConvert.com_thao5t.json")
+fetch("user.json")
   .then(res => res.json())
   .then(data => {
     userData = data;
