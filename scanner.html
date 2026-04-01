@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>掃描</title>
+<script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+
+<body>
+
+<h2>QR 掃描</h2>
+<div id="reader" style="width:300px;"></div>
+
+<script>
+let selected = JSON.parse(localStorage.getItem("selectedStudents")) || [];
+let signed = {};
+let courseData = [];
+
+fetch("課程資料.json")
+.then(res => res.json())
+.then(data => courseData = data);
+
+const scanner = new Html5Qrcode("reader");
+
+scanner.start(
+  { facingMode: "environment" },
+  { fps: 20, qrbox: 250 },
+  (decodedText) => {
+
+    const id = decodedText.trim();
+
+    const student = courseData.find(s => s.學號 === id);
+
+    if (!student) {
+      alert("❌ 查無此人");
+      return;
+    }
+
+    if (!selected.find(s => s.id === id)) {
+      alert("⚠️ 未在點名名單");
+      return;
+    }
+
+    if (signed[id]) {
+      alert("⚠️ 已簽到過");
+      return;
+    }
+
+    signed[id] = true;
+
+    alert("✅ 簽到成功\n" + student.姓名);
+
+  }
+);
+</script>
+
+</body>
+</html>
