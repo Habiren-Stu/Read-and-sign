@@ -1,25 +1,220 @@
-[
-  {
-    "編號": 1,
-    "班級": "101",
-    "座號": "01",
-    "學號": "A001",
-    "姓名": "王小明",
-    "課程名稱": "數學",
-    "科目": "數學",
-    "教室": "A101",
-    "教師": "陳老師"
-  },
-  {
-    "編號": 2,
-    "班級": "101",
-    "座號": "01",
-    "學號": "A001",
-    "姓名": "王小明",
-    "課程名稱": "英文",
-    "科目": "英文",
-    "教室": "B201",
-    "教師": "李老師"
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>跑班系統</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  body { font-family: Arial; text-align: center; background: #f5f5f5; }
+  h1 { margin: 20px; }
+
+  /* 按鈕與上傳區塊 */
+  .control-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    width: 90%;
+    margin: 0 auto 20px auto;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
   }
-]
- 
+
+  .button-row { display: flex; justify-content: center; gap: 10px; width: 100%; }
+  
+  .btn {
+    flex: 1;
+    max-width: 200px;
+    padding: 15px;
+    font-size: calc(12px + 0.8vw);
+    border: none;
+    border-radius: 10px;
+    color: white;
+    cursor: pointer;
+  }
+  .mail { background: #4CAF50; }
+  .sign { background: #2196F3; }
+  
+  /* 表格 */
+  .table-container {
+    max-height: 500px;
+    overflow-y: auto;
+    width: 95%;
+    margin: auto;
+    background: white;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 10px; border-bottom: 1px solid #ddd; text-align: center; }
+  th { background: #333; color: white; position: sticky; top: 0; }
+  
+  .file-input-wrapper { text-align: left; width: 100%; max-width: 400px; }
+  input[type="file"] { margin-top: 5px; }
+</style>
+</head>
+
+<body>
+
+<h1>跑班系統</h1>
+
+<div class="control-panel">
+  <div class="file-input-wrapper">
+    <label for="excelUpload"><strong>📁 匯入「課程資料」(Excel):</strong></label>
+    <input type="file" id="excelUpload" accept=".xlsx, .xls" />
+  </div>
+
+  <div class="button-row">
+    <button class="btn mail" onclick="sendMail()">📧 發送點名信</button>
+    <button class="btn sign" onclick="openScanner()">📷 開啟掃描頁</button>
+  </div>
+</div>
+
+<div class="table-container">
+  <table id="table">
+    <thead>
+      <tr>
+        <th>選取</th>
+        <th>編號</th>
+        <th>班級</th>
+        <th>座號</th>
+        <th>學號</th>
+        <th>姓名</th>
+        <th>課程名稱</th>
+        <th>科目</th>
+        <th>上課教室</th>
+        <th>教師</th>
+      </tr>
+    </thead>
+    <tbody>
+      </tbody>
+  </table>
+</div>
+
+<script>
+let userData = []; // 存放 JSON user 資料
+let courseData = []; // 存放 Excel 匯入的課程資料
+
+// 1. 初始化時載入 JSON USER 資料 (根據您的描述，這是 json 就是 user)
+// 這裡將 tableConvert.com_thao5t.json 視為您的 user 資料
+fetch("tableConvert.com_thao5t.json")
+  .then(res => res.json())
+  .then(data => {
+    userData = data;
+    console.log("已載入 USER 資料:", userData);
+  })
+  .catch(err => console.error("載入 JSON 失敗:", err));
+
+// 2. 監聽 Excel 檔案上傳 (課程資料)
+document.getElementById('excelUpload').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const data = new Uint8Array(e.target.result);
+    // 使用 SheetJS 讀取 Excel
+    const workbook = XLSX.read(data, { type: 'array' });
+    
+    // 假設資料在第一個工作表
+    const firstSheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[firstSheetName];
+    
+    // 將 Excel 轉換為 JSON 陣列 (第一行為標題)
+    courseData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+    console.log("成功匯入課程資料:", courseData);
+    
+    // 渲染表格
+    renderTable(courseData);
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+// 3. 渲染表格
+function renderTable(data) {
+  const tbody = document.querySelector("#table tbody");
+  tbody.innerHTML = ""; // 清空現有資料
+
+  data.forEach(row => {
+    // 略過空白的無效列 (如 Excel 中常有的空行)
+    if (!row["編號"] && !row["學號"]) return; 
+
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+      <td><input type="checkbox" data-id="${row.學號}" data-course="${row.課程名稱}" onchange="handleCheck(this)"></td>
+      <td>${row.編號 || ""}</td>
+      <td>${row.班級 || ""}</td>
+      <td>${row.座號 || ""}</td>
+      <td>${row.學號 || ""}</td>
+      <td>${row.姓名 || ""}</td>
+      <td>${row.課程名稱 || ""}</td>
+      <td>${row.科目 || ""}</td>
+      <td>${row.上課教室 || ""}</td>
+      <td>${row.教師 || ""}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// 4. ✔ 核取方塊邏輯：如果該學號(同一人)有多個課程名稱，只能選擇一個
+function handleCheck(cb) {
+  if (!cb.checked) return; // 如果是取消勾選則不處理
+  
+  const studentId = cb.dataset.id;
+
+  // 找出所有此學號的 Checkbox
+  const checkboxes = document.querySelectorAll(`input[data-id='${studentId}']`);
+  
+  checkboxes.forEach(x => {
+    // 如果不是當前點擊的這個，就強制取消勾選 (確保同一學號只選了一堂課)
+    if (x !== cb) {
+      x.checked = false;
+    }
+  });
+}
+
+// 5. 獲取已選取的名單
+function getSelected() {
+  const selectedRows = [];
+  const checkedBoxes = document.querySelectorAll("input[type='checkbox']:checked");
+  
+  checkedBoxes.forEach(cb => {
+    const tr = cb.closest("tr");
+    selectedRows.push({
+      學號: cb.dataset.id,
+      編號: tr.cells[1].innerText,
+      姓名: tr.cells[5].innerText,
+      課程名稱: tr.cells[6].innerText
+    });
+  });
+  return selectedRows;
+}
+
+// 📧 發送名單
+function sendMail() {
+  const selected = getSelected();
+  if(selected.length === 0) {
+    alert("請先選擇要點名的學生！");
+    return;
+  }
+  
+  // 將選取結果存入 localStorage 供 scanner.html 使用
+  localStorage.setItem("selectedStudents", JSON.stringify(selected));
+  console.log("即將發送點名信的名單：", selected);
+  alert("已確認 " + selected.length + " 人的點名名單並準備發送！");
+}
+
+// 📷 開掃描頁
+function openScanner() {
+  const selected = getSelected();
+  // 即便沒有選也可以進去，但實務上可能要阻擋，視需求而定
+  localStorage.setItem("selectedStudents", JSON.stringify(selected));
+  window.location.href = "scanner.html";
+}
+</script>
+
+</body>
+</html>
