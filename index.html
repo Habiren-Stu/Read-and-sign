@@ -3,224 +3,127 @@
 <head>
 <meta charset="UTF-8">
 <title>跑班系統</title>
+
 <style>
-  body { font-family: Arial; text-align: center; background: #f5f5f5; }
-  h1 { margin: 20px; }
+body { font-family: Arial; text-align:center; background:#f5f5f5; }
+.button-row { display:flex; gap:10px; justify-content:center; margin:20px; }
+.btn { flex:1; max-width:200px; padding:15px; color:white; border:none; border-radius:10px; font-size:calc(12px + 0.8vw); }
+.mail { background:#4CAF50; }
+.sign { background:#2196F3; }
+.check { background:#f44336; }
 
-  /* 頂部控制列 */
-  .control-panel {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 15px;
-    margin-bottom: 20px;
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-    width: 90%;
-    margin: 0 auto 20px auto;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-  }
-
-  .status-text {
-    font-size: 18px;
-    font-weight: bold;
-    color: #333;
-    padding: 10px;
-    background: #eef2f3;
-    border-radius: 8px;
-    width: 100%;
-    max-width: 400px;
-  }
-
-  .button-row { display: flex; justify-content: center; gap: 10px; width: 100%; margin-top: 10px;}
-  
-  .btn {
-    flex: 1;
-    max-width: 200px;
-    padding: 15px;
-    font-size: calc(12px + 0.8vw);
-    border: none;
-    border-radius: 10px;
-    color: white;
-    cursor: pointer;
-    font-weight: bold;
-  }
-  .mail { background: #4CAF50; }
-  .sign { background: #2196F3; }
-  
-  /* 表格 */
-  .table-container {
-    max-height: 500px;
-    overflow-y: auto;
-    width: 95%;
-    margin: auto;
-    background: white;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-  }
-  table { width: 100%; border-collapse: collapse; }
-  th, td { padding: 10px; border-bottom: 1px solid #ddd; text-align: center; }
-  th { background: #333; color: white; position: sticky; top: 0; }
-  
-  /* 勾選框放大一點比較好按 */
-  input[type="checkbox"] { transform: scale(1.5); cursor: pointer; }
+.table-container { max-height:400px; overflow-y:auto; }
+table { width:90%; margin:auto; border-collapse:collapse; background:white; }
+th,td { padding:10px; border:1px solid #ccc; }
+th { position:sticky; top:0; background:#eee; }
 </style>
 </head>
 
 <body>
 
-<h1>跑班系統</h1>
+<h1>XX學校跑班系統</h1>
 
-<div class="control-panel">
-  <div class="status-text" id="statusText">⏳ 正在自動讀取課程資料 (JSON)...</div>
-
-  <div class="button-row">
-    <button class="btn mail" onclick="sendMail()">📧 確認 USER 名單</button>
-    <button class="btn sign" onclick="openScanner()">📷 開啟掃描頁</button>
-  </div>
+<div class="button-row">
+  <button class="btn mail" onclick="generateQR()">發出點名信</button>
+  <button class="btn sign" onclick="openScanner()">學生簽到系統</button>
+  <button class="btn check" onclick="checkAttendance()">查詢出缺席</button>
 </div>
+
+<div id="qrcode"></div>
 
 <div class="table-container">
-  <table id="table">
-    <thead>
-      <tr>
-        <th>選取</th>
-        <th>編號</th>
-        <th>班級</th>
-        <th>座號</th>
-        <th>學號</th>
-        <th>姓名</th>
-        <th>課程名稱</th>
-        <th>科目</th>
-        <th>上課教室</th>
-        <th>教師</th>
-        <th>EMAIL</th>
-      </tr>
-    </thead>
-    <tbody>
-      </tbody>
-  </table>
+<table id="table">
+<thead>
+<tr>
+  <th>選</th><th>姓名</th><th>學號</th><th>課程</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
 <script>
-let courseData = []; 
+// 🔐 登入驗證
+async function checkUser() {
+  const email = prompt("輸入Email");
+  const users = await fetch("user.json").then(r=>r.json());
+  if (!users.find(u=>u.email===email)) {
+    document.body.innerHTML="❌ 無權限";
+  }
+}
+checkUser();
 
-// ==========================================
-// 1. 網頁開啟時，自動讀取 GitHub 上的「課程資料.json」
-// ==========================================
-window.onload = function() {
-  // 注意：確保您上傳到 GitHub 的檔名為 "課程資料.json"
-  fetch("課程資料.json")
-    .then(response => {
-      if (!response.ok) {
-        throw new Error("找不到檔案");
-      }
-      // 直接將回應解析為 JSON
-      return response.json();
-    })
-    .then(data => {
-      courseData = data;
-      
-      console.log("✅ 成功自動載入課程資料:", courseData);
-      document.getElementById("statusText").innerHTML = `✅ 成功載入！共讀取 ${courseData.length} 筆資料。`;
-      
-      // 渲染表格
-      renderTable(courseData);
-    })
-    .catch(error => {
-      console.error("讀取失敗:", error);
-      document.getElementById("statusText").innerHTML = `❌ 讀取失敗：請確認 GitHub 上是否有「課程資料.json」檔案。`;
-      document.getElementById("statusText").style.color = "red";
-    });
-};
+let data = [];
 
-// ==========================================
-// 2. 渲染表格
-// ==========================================
-function renderTable(data) {
-  const tbody = document.querySelector("#table tbody");
-  tbody.innerHTML = ""; 
+// 📄 載入資料
+fetch("課程資料.json")
+.then(res=>res.json())
+.then(d=>{
+  data=d;
+  const tbody=document.querySelector("#table tbody");
 
-  data.forEach(row => {
-    // 略過沒有學號的空白資料
-    if (!row["編號"] && !row["學號"]) return; 
-
-    const tr = document.createElement("tr");
-
-    // 相容可能的大小寫差異
-    const email = row["EMAIL"] || row["Email"] || row["email"] || "";
-
-    tr.innerHTML = `
-      <td><input type="checkbox" data-id="${row.學號}" data-course="${row.課程名稱}" onchange="handleCheck(this)"></td>
-      <td>${row.編號 || ""}</td>
-      <td>${row.班級 || ""}</td>
-      <td>${row.座號 || ""}</td>
-      <td>${row.學號 || ""}</td>
-      <td>${row.姓名 || ""}</td>
-      <td>${row.課程名稱 || ""}</td>
-      <td>${row.科目 || ""}</td>
-      <td>${row.上課教室 || ""}</td>
-      <td>${row.教師 || ""}</td>
-      <td>${email}</td>
+  d.forEach(row=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML=`
+      <td><input type="checkbox" data-id="${row.學號}" onchange="onlyOne(this)"></td>
+      <td>${row.姓名}</td>
+      <td>${row.學號}</td>
+      <td>${row.課程名稱}</td>
     `;
     tbody.appendChild(tr);
   });
+});
+
+// ✔ 同學只能選一課
+function onlyOne(cb){
+  const id=cb.dataset.id;
+  document.querySelectorAll(`input[data-id='${id}']`)
+    .forEach(x=>{ if(x!==cb) x.checked=false; });
 }
 
-// ==========================================
-// 3. 核取方塊邏輯：同一學號只能選擇一堂課
-// ==========================================
-function handleCheck(cb) {
-  if (!cb.checked) return; 
-  
-  const studentId = cb.dataset.id;
-  const checkboxes = document.querySelectorAll(`input[data-id='${studentId}']`);
-  
-  checkboxes.forEach(x => {
-    if (x !== cb) {
-      x.checked = false; 
-    }
+// 📧 產生QR
+function generateQR(){
+  const selected=getSelected();
+  const div=document.getElementById("qrcode");
+  div.innerHTML="";
+
+  selected.forEach(s=>{
+    const text=`${s.id}_${s.name}_${new Date().toLocaleDateString()}`;
+
+    const box=document.createElement("div");
+    new QRCode(box,{text:text,width:120,height:120});
+
+    div.appendChild(document.createTextNode(s.name));
+    div.appendChild(box);
   });
 }
 
-// ==========================================
-// 4. 獲取已選取的「USER (點名名單)」
-// ==========================================
-function getSelected() {
-  const selectedRows = [];
-  const checkedBoxes = document.querySelectorAll("input[type='checkbox']:checked");
-  
-  checkedBoxes.forEach(cb => {
-    const tr = cb.closest("tr");
-    selectedRows.push({
-      學號: cb.dataset.id,
-      編號: tr.cells[1].innerText,
-      姓名: tr.cells[5].innerText,
-      課程名稱: tr.cells[6].innerText,
-      EMAIL: tr.cells[10].innerText
+// 📷 開掃描
+function openScanner(){
+  localStorage.setItem("selected",JSON.stringify(getSelected()));
+  window.location.href="scanner.html";
+}
+
+// 📊 查詢
+function checkAttendance(){
+  const r=JSON.parse(localStorage.getItem("records"))||[];
+  console.log(r);
+  alert("查看 console");
+}
+
+// 共用
+function getSelected(){
+  const arr=[];
+  document.querySelectorAll("input:checked").forEach(cb=>{
+    const row=cb.closest("tr").children;
+    arr.push({
+      id:row[2].innerText,
+      name:row[1].innerText
     });
   });
-  return selectedRows;
-}
-
-// 📧 確認並儲存名單
-function sendMail() {
-  const selected = getSelected();
-  if(selected.length === 0) {
-    alert("請先在表格中勾選要點名的學生！");
-    return;
-  }
-  
-  localStorage.setItem("selectedStudents", JSON.stringify(selected));
-  console.log("已產生的 USER 名單 (含 EMAIL)：", selected);
-  alert("✅ 已確認 " + selected.length + " 人的點名名單 (USER)！您可以前往掃描頁了。");
-}
-
-// 📷 開啟掃描頁
-function openScanner() {
-  const selected = getSelected();
-  localStorage.setItem("selectedStudents", JSON.stringify(selected));
-  window.location.href = "scanner.html";
+  return arr;
 }
 </script>
 
