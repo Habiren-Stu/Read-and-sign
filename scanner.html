@@ -7,52 +7,49 @@
 </head>
 
 <body>
-
 <h2>QR 掃描</h2>
 <div id="reader" style="width:300px;"></div>
 
 <script>
-let selected = JSON.parse(localStorage.getItem("selectedStudents")) || [];
+let selected = JSON.parse(localStorage.getItem("selected")) || [];
 let signed = {};
-let courseData = [];
+let data=[];
 
 fetch("課程資料.json")
-.then(res => res.json())
-.then(data => courseData = data);
+.then(r=>r.json())
+.then(d=>data=d);
 
-const scanner = new Html5Qrcode("reader");
+function saveRecord(stu){
+  let r=JSON.parse(localStorage.getItem("records"))||[];
+  r.push({學號:stu.學號,姓名:stu.姓名,時間:new Date().toLocaleString()});
+  localStorage.setItem("records",JSON.stringify(r));
+}
+
+const scanner=new Html5Qrcode("reader");
 
 scanner.start(
-  { facingMode: "environment" },
-  { fps: 20, qrbox: 250 },
-  (decodedText) => {
+  { facingMode:"environment" },
+  { fps:20, qrbox:250 },
+  text=>{
+    const id=text.split("_")[0];
 
-    const id = decodedText.trim();
+    const stu=data.find(s=>s.學號===id);
+    if(!stu){ alert("❌ 無此人"); return; }
 
-    const student = courseData.find(s => s.學號 === id);
-
-    if (!student) {
-      alert("❌ 查無此人");
-      return;
+    if(!selected.find(s=>s.id===id)){
+      alert("⚠️ 未點名"); return;
     }
 
-    if (!selected.find(s => s.id === id)) {
-      alert("⚠️ 未在點名名單");
-      return;
+    if(signed[id]){
+      alert("⚠️ 已簽到"); return;
     }
 
-    if (signed[id]) {
-      alert("⚠️ 已簽到過");
-      return;
-    }
+    signed[id]=true;
+    saveRecord(stu);
 
-    signed[id] = true;
-
-    alert("✅ 簽到成功\n" + student.姓名);
-
+    alert("✅ 簽到成功 "+stu.姓名);
   }
 );
 </script>
-
 </body>
 </html>
